@@ -25,8 +25,8 @@ export default function Game() {
     const ctx = canvas.getContext('2d')
 
     function resize() {
-      canvas.width = document.documentElement.clientWidth
-      canvas.height = document.documentElement.clientHeight
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
       player.current.x = canvas.width / 2 - 20
       targetX.current = player.current.x
     }
@@ -48,20 +48,20 @@ export default function Game() {
       ctx.fillStyle = '#020617'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      player.current.x += (targetX.current - player.current.x) * 0.25
+      player.current.x += (targetX.current - player.current.x) * 0.2
       ctx.fillStyle = '#38bdf8'
       ctx.fillRect(player.current.x, canvas.height - 110, 40, 40)
 
       ctx.fillStyle = '#fde047'
       bullets.current.forEach((b, i) => {
-        b.y -= 10
+        b.y -= 12
         ctx.fillRect(b.x, b.y, 6, 16)
         if (b.y < 0) bullets.current.splice(i, 1)
       })
 
       ctx.fillStyle = '#22c55e'
       zombies.current.forEach((z, zi) => {
-        z.y += 1.5 + level * 0.4
+        z.y += 1.3 + level * 0.4
         ctx.fillRect(z.x, z.y, z.size, z.size)
 
         if (z.y > canvas.height) {
@@ -88,18 +88,31 @@ export default function Game() {
       requestAnimationFrame(draw)
     }
 
-    const spawner = setInterval(spawnZombie, 1000)
-    draw()
+    const spawner = setInterval(spawnZombie, 900)
+
+    // ✅ AUTO DISPARO CADA 300ms
+    const autoFire = setInterval(() => {
+      bullets.current.push({
+        x: player.current.x + 18,
+        y: canvas.height - 130
+      })
+    }, 300)
 
     function handleTouch(e) {
+      e.preventDefault()
       if (!e.touches || !e.touches[0]) return
       targetX.current = e.touches[0].clientX - 20
     }
 
-    window.addEventListener('touchmove', handleTouch)
+    window.addEventListener('touchstart', handleTouch, { passive: false })
+    window.addEventListener('touchmove', handleTouch, { passive: false })
+
+    draw()
 
     return () => {
       clearInterval(spawner)
+      clearInterval(autoFire)
+      window.removeEventListener('touchstart', handleTouch)
       window.removeEventListener('touchmove', handleTouch)
       window.removeEventListener('resize', resize)
     }
@@ -109,14 +122,6 @@ export default function Game() {
     if (score >= level * 120) setLevel(v => v + 1)
     if (lives <= 0) setGameOver(true)
   }, [score, lives])
-
-  function shoot() {
-    if (!canvasRef.current) return
-    bullets.current.push({
-      x: player.current.x + 18,
-      y: canvasRef.current.height - 130
-    })
-  }
 
   function goFullscreen() {
     const el = document.documentElement
@@ -146,8 +151,6 @@ export default function Game() {
       </div>
 
       <canvas ref={canvasRef} />
-
-      <button onTouchStart={shoot} style={styles.fireBtn}>🔥</button>
     </div>
   )
 }
@@ -157,7 +160,8 @@ const styles = {
     position: 'fixed',
     inset: 0,
     background: '#020617',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    touchAction: 'none'
   },
   hud: {
     position: 'absolute',
@@ -166,19 +170,6 @@ const styles = {
     color: '#fff',
     zIndex: 20,
     fontSize: 14
-  },
-  fireBtn: {
-    position: 'absolute',
-    bottom: 30,
-    right: 25,
-    width: 75,
-    height: 75,
-    borderRadius: '50%',
-    border: 'none',
-    background: 'linear-gradient(145deg,#ef4444,#7f1d1d)',
-    color: '#fff',
-    fontSize: 26,
-    zIndex: 20
   },
   fullBtn: {
     position: 'absolute',
