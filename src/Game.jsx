@@ -3,22 +3,21 @@ import { useEffect, useRef, useState } from 'react'
 export default function Game() {
   const canvasRef = useRef(null)
 
-  const [level, setLevel] = useState(1)
   const [score, setScore] = useState(0)
   const [lives, setLives] = useState(3)
+  const [level, setLevel] = useState(1)
   const [gameOver, setGameOver] = useState(false)
-  const [discount, setDiscount] = useState(null)
 
   const player = useRef({ x: 160 })
   const targetX = useRef(160)
   const bullets = useRef([])
   const zombies = useRef([])
-  const speed = useRef(1)
 
   useEffect(() => {
     const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
+    if (!canvas) return
 
+    const ctx = canvas.getContext('2d')
     canvas.width = 360
     canvas.height = 500
 
@@ -36,7 +35,8 @@ export default function Game() {
       })
     }
 
-    function movePlayer(e) {
+    function move(e) {
+      if (!e.touches) return
       const touchX = e.touches[0].clientX
       targetX.current = Math.max(0, Math.min(320, touchX - 20))
     }
@@ -46,25 +46,25 @@ export default function Game() {
 
       ctx.clearRect(0, 0, 360, 500)
 
-      // 🎯 Movimiento suave hacia el objetivo
+      // Movimiento suave
       player.current.x += (targetX.current - player.current.x) * 0.15
 
       // Player
       ctx.fillStyle = 'cyan'
       ctx.fillRect(player.current.x, 420, 40, 40)
 
-      // Bullets
+      // Balas
       ctx.fillStyle = 'yellow'
-      bullets.current.forEach((b, i) => {
+      bullets.current.forEach((b, bi) => {
         b.y -= 6
         ctx.fillRect(b.x, b.y, 4, 10)
-        if (b.y < 0) bullets.current.splice(i, 1)
+        if (b.y < 0) bullets.current.splice(bi, 1)
       })
 
       // Zombies
       ctx.fillStyle = 'green'
       zombies.current.forEach((z, zi) => {
-        z.y += speed.current
+        z.y += 1 + level * 0.3
         ctx.fillRect(z.x, z.y, 40, 40)
 
         if (z.y > 500) {
@@ -86,14 +86,9 @@ export default function Game() {
             bullets.current.splice(bi, 1)
 
             setScore(v => {
-              const newScore = v + 10
-
-              if (newScore % 100 === 0) {
-                setLevel(l => l + 1)
-                speed.current += 0.5
-              }
-
-              return newScore
+              const n = v + 10
+              if (n % 100 === 0) setLevel(l => l + 1)
+              return n
             })
           }
         })
@@ -103,23 +98,21 @@ export default function Game() {
     }
 
     const interval = setInterval(spawnZombie, 1200)
-    update()
 
     window.addEventListener('touchstart', shoot)
-    window.addEventListener('touchmove', movePlayer)
+    window.addEventListener('touchmove', move)
+
+    update()
 
     return () => {
       clearInterval(interval)
       window.removeEventListener('touchstart', shoot)
-      window.removeEventListener('touchmove', movePlayer)
+      window.removeEventListener('touchmove', move)
     }
-  }, [gameOver])
+  }, [gameOver, level])
 
   useEffect(() => {
-    if (lives <= 0) {
-      setGameOver(true)
-      setDiscount('ZOMBIE10')
-    }
+    if (lives <= 0) setGameOver(true)
   }, [lives])
 
   if (gameOver) {
@@ -127,21 +120,19 @@ export default function Game() {
       <div style={{ textAlign: 'center' }}>
         <h2>💀 Game Over</h2>
         <p>Puntaje: {score}</p>
-        <p>Código de descuento:</p>
-        <h3>{discount}</h3>
 
         <a
           href="https://wa.me/541137659959"
           style={{
-            display: 'inline-block',
-            marginTop: 10,
             padding: 12,
             background: 'green',
             color: '#fff',
-            borderRadius: 8
+            borderRadius: 8,
+            display: 'inline-block',
+            marginTop: 10
           }}
         >
-          Reclamar por WhatsApp
+          Reclamar descuento en SmARTRonica M&M
         </a>
       </div>
     )
@@ -151,10 +142,7 @@ export default function Game() {
     <div style={{ textAlign: 'center' }}>
       <p>Nivel: {level} | Puntos: {score} | Vidas: {lives}</p>
       <canvas ref={canvasRef} style={{ background: '#111', borderRadius: 8 }} />
-      <p>
-        👉 Tocá para disparar<br />
-        👉 Deslizá el dedo para moverte suave
-      </p>
+      <p>👉 Tocá para disparar<br/>👉 Deslizá para moverte</p>
     </div>
   )
 }
