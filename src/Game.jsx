@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 
 export default function Game() {
   const canvasRef = useRef(null)
+  const bullets = useRef([])
+  const zombies = useRef([])
+  const player = useRef({ x: 150 })
+  const targetX = useRef(150)
 
   const [mounted, setMounted] = useState(false)
   const [score, setScore] = useState(0)
@@ -9,38 +13,26 @@ export default function Game() {
   const [level, setLevel] = useState(1)
   const [gameOver, setGameOver] = useState(false)
 
-  const player = useRef({ x: 150 })
-  const targetX = useRef(150)
-  const bullets = useRef([])
-  const zombies = useRef([])
-
-  // ✅ asegura que solo se ejecute en el cliente
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
     if (!mounted) return
+    if (!canvasRef.current) return
 
     const canvas = canvasRef.current
-    if (!canvas) return
-
     const ctx = canvas.getContext('2d')
 
     function resize() {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+      canvas.width = document.documentElement.clientWidth
+      canvas.height = document.documentElement.clientHeight
       player.current.x = canvas.width / 2 - 20
       targetX.current = player.current.x
     }
 
     resize()
     window.addEventListener('resize', resize)
-
-    function drawBackground() {
-      ctx.fillStyle = '#020617'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-    }
 
     function spawnZombie() {
       zombies.current.push({
@@ -50,27 +42,23 @@ export default function Game() {
       })
     }
 
-    function update() {
+    function draw() {
       if (gameOver) return
 
-      drawBackground()
+      ctx.fillStyle = '#020617'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      // mover por desliz
       player.current.x += (targetX.current - player.current.x) * 0.25
-
-      // jugador
       ctx.fillStyle = '#38bdf8'
       ctx.fillRect(player.current.x, canvas.height - 110, 40, 40)
 
-      // balas
       ctx.fillStyle = '#fde047'
       bullets.current.forEach((b, i) => {
         b.y -= 10
-        ctx.fillRect(b.x, b.y, 5, 14)
+        ctx.fillRect(b.x, b.y, 6, 16)
         if (b.y < 0) bullets.current.splice(i, 1)
       })
 
-      // zombies
       ctx.fillStyle = '#22c55e'
       zombies.current.forEach((z, zi) => {
         z.y += 1.5 + level * 0.4
@@ -82,14 +70,13 @@ export default function Game() {
         }
       })
 
-      // colisiones
       zombies.current.forEach((z, zi) => {
         bullets.current.forEach((b, bi) => {
           if (
             b.x < z.x + z.size &&
-            b.x + 5 > z.x &&
+            b.x + 6 > z.x &&
             b.y < z.y + z.size &&
-            b.y + 14 > z.y
+            b.y + 16 > z.y
           ) {
             zombies.current.splice(zi, 1)
             bullets.current.splice(bi, 1)
@@ -98,22 +85,22 @@ export default function Game() {
         })
       })
 
-      requestAnimationFrame(update)
+      requestAnimationFrame(draw)
     }
 
     const spawner = setInterval(spawnZombie, 1000)
-    update()
+    draw()
 
-    function handleMove(e) {
+    function handleTouch(e) {
       if (!e.touches || !e.touches[0]) return
       targetX.current = e.touches[0].clientX - 20
     }
 
-    window.addEventListener('touchmove', handleMove)
+    window.addEventListener('touchmove', handleTouch)
 
     return () => {
       clearInterval(spawner)
-      window.removeEventListener('touchmove', handleMove)
+      window.removeEventListener('touchmove', handleTouch)
       window.removeEventListener('resize', resize)
     }
   }, [mounted, level, gameOver])
@@ -123,17 +110,15 @@ export default function Game() {
     if (lives <= 0) setGameOver(true)
   }, [score, lives])
 
-  // ✅ disparo seguro
   function shoot() {
+    if (!canvasRef.current) return
     bullets.current.push({
       x: player.current.x + 18,
-      y: window.innerHeight - 130
+      y: canvasRef.current.height - 130
     })
   }
 
-  // ✅ fullscreen seguro
   function goFullscreen() {
-    if (typeof document === 'undefined') return
     const el = document.documentElement
     if (el.requestFullscreen) el.requestFullscreen()
   }
