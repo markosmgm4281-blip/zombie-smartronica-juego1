@@ -2,11 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 
 export default function Game() {
   const canvasRef = useRef(null)
+
   const [level, setLevel] = useState(1)
   const [score, setScore] = useState(0)
   const [lives, setLives] = useState(3)
   const [gameOver, setGameOver] = useState(false)
   const [discount, setDiscount] = useState(null)
+
+  const player = useRef({ x: 160 })
+  const bullets = useRef([])
+  const zombies = useRef([])
+  const speed = useRef(1)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -15,96 +21,102 @@ export default function Game() {
     canvas.width = 360
     canvas.height = 500
 
-    let player = { x: 160, y: 420, w: 40, h: 40 }
-    let bullets = []
-    let zombies = []
-    let speed = 1 + level * 0.5
-
     function spawnZombie() {
-      zombies.push({
+      zombies.current.push({
         x: Math.random() * 320,
-        y: -40,
-        w: 40,
-        h: 40
+        y: -40
       })
     }
 
     function shoot() {
-      bullets.push({
-        x: player.x + 18,
-        y: player.y,
-        w: 4,
-        h: 10
+      bullets.current.push({
+        x: player.current.x + 18,
+        y: 420
       })
+    }
+
+    function movePlayer(e) {
+      const touchX = e.touches[0].clientX
+      player.current.x = Math.max(0, Math.min(320, touchX - 20))
     }
 
     function update() {
       if (gameOver) return
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.clearRect(0, 0, 360, 500)
 
       // Player
       ctx.fillStyle = 'cyan'
-      ctx.fillRect(player.x, player.y, player.w, player.h)
+      ctx.fillRect(player.current.x, 420, 40, 40)
 
       // Bullets
       ctx.fillStyle = 'yellow'
-      bullets.forEach(b => {
-        b.y -= 5
-        ctx.fillRect(b.x, b.y, b.w, b.h)
+      bullets.current.forEach((b, i) => {
+        b.y -= 6
+        ctx.fillRect(b.x, b.y, 4, 10)
+        if (b.y < 0) bullets.current.splice(i, 1)
       })
 
       // Zombies
       ctx.fillStyle = 'green'
-      zombies.forEach(z => {
-        z.y += speed
-        ctx.fillRect(z.x, z.y, z.w, z.h)
-      })
+      zombies.current.forEach((z, zi) => {
+        z.y += speed.current
+        ctx.fillRect(z.x, z.y, 40, 40)
 
-      // Collisions
-      zombies.forEach((z, zi) => {
-        bullets.forEach((b, bi) => {
-          if (
-            b.x < z.x + z.w &&
-            b.x + b.w > z.x &&
-            b.y < z.y + z.h &&
-            b.y + b.h > z.y
-          ) {
-            zombies.splice(zi, 1)
-            bullets.splice(bi, 1)
-            setScore(s => s + 10)
-
-            if ((score + 10) % 100 === 0) {
-              setLevel(l => l + 1)
-              speed += 0.5
-            }
-          }
-        })
-
-        if (z.y > canvas.height) {
-          zombies.splice(zi, 1)
-          setLives(l => l - 1)
+        if (z.y > 500) {
+          zombies.current.splice(zi, 1)
+          setLives(v => v - 1)
         }
       })
 
-      if (lives <= 0) {
-        setGameOver(true)
-        setDiscount('ZOMBIE10')
-      }
+      // Collisions
+      zombies.current.forEach((z, zi) => {
+        bullets.current.forEach((b, bi) => {
+          if (
+            b.x < z.x + 40 &&
+            b.x + 4 > z.x &&
+            b.y < z.y + 40 &&
+            b.y + 10 > z.y
+          ) {
+            zombies.current.splice(zi, 1)
+            bullets.current.splice(bi, 1)
+
+            setScore(v => {
+              const newScore = v + 10
+
+              if (newScore % 100 === 0) {
+                setLevel(l => l + 1)
+                speed.current += 0.5
+              }
+
+              return newScore
+            })
+          }
+        })
+      })
 
       requestAnimationFrame(update)
     }
 
-    const interval = setInterval(spawnZombie, 1000 - level * 80)
+    const interval = setInterval(spawnZombie, 1200)
     update()
 
     window.addEventListener('touchstart', shoot)
+    window.addEventListener('touchmove', movePlayer)
 
     return () => {
       clearInterval(interval)
       window.removeEventListener('touchstart', shoot)
+      window.removeEventListener('touchmove', movePlayer)
     }
-  }, [level, lives, gameOver, score])
+  }, [gameOver])
+
+  useEffect(() => {
+    if (lives <= 0) {
+      setGameOver(true)
+      setDiscount('ZOMBIE10')
+    }
+  }, [lives])
 
   if (gameOver) {
     return (
@@ -135,7 +147,10 @@ export default function Game() {
     <div style={{ textAlign: 'center' }}>
       <p>Nivel: {level} | Puntos: {score} | Vidas: {lives}</p>
       <canvas ref={canvasRef} style={{ background: '#111', borderRadius: 8 }} />
-      <p>Tocá la pantalla para disparar</p>
+      <p>
+        👉 Tocá para disparar<br />
+        👉 Arrastrá el dedo para moverte
+      </p>
     </div>
   )
 }
