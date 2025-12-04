@@ -3,18 +3,28 @@ import { useEffect, useRef, useState } from 'react'
 export default function Game() {
   const canvasRef = useRef(null)
 
+  const [mounted, setMounted] = useState(false)
   const [score, setScore] = useState(0)
   const [lives, setLives] = useState(3)
   const [level, setLevel] = useState(1)
   const [gameOver, setGameOver] = useState(false)
 
-  const player = useRef({ x: 0 })
-  const targetX = useRef(0)
+  const player = useRef({ x: 150 })
+  const targetX = useRef(150)
   const bullets = useRef([])
   const zombies = useRef([])
 
+  // ✅ asegura que solo se ejecute en el cliente
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
     const canvas = canvasRef.current
+    if (!canvas) return
+
     const ctx = canvas.getContext('2d')
 
     function resize() {
@@ -27,12 +37,8 @@ export default function Game() {
     resize()
     window.addEventListener('resize', resize)
 
-    // Fondo animado
     function drawBackground() {
-      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height)
-      grad.addColorStop(0, '#020617')
-      grad.addColorStop(1, '#020024')
-      ctx.fillStyle = grad
+      ctx.fillStyle = '#020617'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
     }
 
@@ -49,17 +55,14 @@ export default function Game() {
 
       drawBackground()
 
-      // Movimiento por desliz
+      // mover por desliz
       player.current.x += (targetX.current - player.current.x) * 0.25
 
-      // JUGADOR
+      // jugador
       ctx.fillStyle = '#38bdf8'
-      ctx.shadowColor = '#38bdf8'
-      ctx.shadowBlur = 15
       ctx.fillRect(player.current.x, canvas.height - 110, 40, 40)
-      ctx.shadowBlur = 0
 
-      // BALAS
+      // balas
       ctx.fillStyle = '#fde047'
       bullets.current.forEach((b, i) => {
         b.y -= 10
@@ -67,10 +70,10 @@ export default function Game() {
         if (b.y < 0) bullets.current.splice(i, 1)
       })
 
-      // ZOMBIES
+      // zombies
       ctx.fillStyle = '#22c55e'
       zombies.current.forEach((z, zi) => {
-        z.y += 1.5 + level * 0.5
+        z.y += 1.5 + level * 0.4
         ctx.fillRect(z.x, z.y, z.size, z.size)
 
         if (z.y > canvas.height) {
@@ -79,14 +82,14 @@ export default function Game() {
         }
       })
 
-      // COLISIONES
+      // colisiones
       zombies.current.forEach((z, zi) => {
         bullets.current.forEach((b, bi) => {
           if (
             b.x < z.x + z.size &&
             b.x + 5 > z.x &&
             b.y < z.y + z.size &&
-            b.y + 12 > z.y
+            b.y + 14 > z.y
           ) {
             zombies.current.splice(zi, 1)
             bullets.current.splice(bi, 1)
@@ -98,11 +101,11 @@ export default function Game() {
       requestAnimationFrame(update)
     }
 
-    const spawner = setInterval(spawnZombie, 900)
+    const spawner = setInterval(spawnZombie, 1000)
     update()
 
-    // DESLIZAR
     function handleMove(e) {
+      if (!e.touches || !e.touches[0]) return
       targetX.current = e.touches[0].clientX - 20
     }
 
@@ -113,14 +116,14 @@ export default function Game() {
       window.removeEventListener('touchmove', handleMove)
       window.removeEventListener('resize', resize)
     }
-  }, [level, gameOver])
+  }, [mounted, level, gameOver])
 
   useEffect(() => {
     if (score >= level * 120) setLevel(v => v + 1)
     if (lives <= 0) setGameOver(true)
   }, [score, lives])
 
-  // DISPARAR
+  // ✅ disparo seguro
   function shoot() {
     bullets.current.push({
       x: player.current.x + 18,
@@ -128,11 +131,14 @@ export default function Game() {
     })
   }
 
-  // FULLSCREEN REAL
+  // ✅ fullscreen seguro
   function goFullscreen() {
+    if (typeof document === 'undefined') return
     const el = document.documentElement
     if (el.requestFullscreen) el.requestFullscreen()
   }
+
+  if (!mounted) return null
 
   if (gameOver) {
     return (
@@ -148,23 +154,15 @@ export default function Game() {
 
   return (
     <div style={styles.container}>
-      {/* BOTÓN FULLSCREEN */}
       <button onClick={goFullscreen} style={styles.fullBtn}>⛶</button>
 
-      {/* HUD */}
       <div style={styles.hud}>
         Nivel: {level} | Puntos: {score} | Vidas: {lives}
       </div>
 
       <canvas ref={canvasRef} />
 
-      {/* BOTÓN DE DISPARO */}
-      <button
-        onTouchStart={shoot}
-        style={styles.fireBtn}
-      >
-        🔥
-      </button>
+      <button onTouchStart={shoot} style={styles.fireBtn}>🔥</button>
     </div>
   )
 }
