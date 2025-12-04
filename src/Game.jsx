@@ -39,7 +39,7 @@ export default function Game() {
         x: Math.random() * (canvas.width - 50),
         y: -60,
         size: 50,
-        life: level >= 3 ? 2 : 1 // más vida desde nivel 3
+        life: level >= 3 ? 2 : 1
       })
     }
 
@@ -50,30 +50,30 @@ export default function Game() {
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       // jugador
-      player.current.x += (targetX.current - player.current.x) * 0.2
+      player.current.x += (targetX.current - player.current.x) * 0.25
       ctx.fillStyle = '#38bdf8'
       ctx.fillRect(player.current.x, canvas.height - 110, 40, 40)
 
-      // balas livianas
+      // 🔫 BALAS AUTOMÁTICAS (RÁPIDAS)
       ctx.fillStyle = '#fde047'
       bullets.current.forEach((b, i) => {
-        b.y -= 12
+        b.y -= 18 // MÁS RÁPIDO
         ctx.fillRect(b.x, b.y, 6, 16)
         if (b.y < 0) bullets.current.splice(i, 1)
       })
 
-      // balas pesadas
+      // 💥 BALAS PESADAS
       ctx.fillStyle = '#f97316'
       heavyBullets.current.forEach((b, i) => {
-        b.y -= 8
-        ctx.fillRect(b.x, b.y, 12, 28)
+        b.y -= 12
+        ctx.fillRect(b.x, b.y, 14, 30)
         if (b.y < 0) heavyBullets.current.splice(i, 1)
       })
 
-      // zombies
+      // 🧟 ZOMBIES
       ctx.fillStyle = '#22c55e'
       zombies.current.forEach((z, zi) => {
-        z.y += 1.3 + level * 0.4
+        z.y += 1.4 + level * 0.5
         ctx.fillRect(z.x, z.y, z.size, z.size)
 
         if (z.y > canvas.height) {
@@ -82,7 +82,7 @@ export default function Game() {
         }
       })
 
-      // colisiones bala liviana
+      // colisión bala normal
       zombies.current.forEach((z, zi) => {
         bullets.current.forEach((b, bi) => {
           if (
@@ -101,18 +101,18 @@ export default function Game() {
         })
       })
 
-      // colisiones bala pesada (mata de 1)
+      // colisión bala pesada (mata de 1)
       zombies.current.forEach((z, zi) => {
         heavyBullets.current.forEach((b, bi) => {
           if (
             b.x < z.x + z.size &&
-            b.x + 12 > z.x &&
+            b.x + 14 > z.x &&
             b.y < z.y + z.size &&
-            b.y + 28 > z.y
+            b.y + 30 > z.y
           ) {
             zombies.current.splice(zi, 1)
             heavyBullets.current.splice(bi, 1)
-            setScore(v => v + 25)
+            setScore(v => v + 30)
           }
         })
       })
@@ -120,15 +120,15 @@ export default function Game() {
       requestAnimationFrame(draw)
     }
 
-    const spawner = setInterval(spawnZombie, 900)
+    const spawner = setInterval(spawnZombie, 850)
 
-    // ✅ DISPARO AUTOMÁTICO LIVIANO
+    // ✅ 🔥 DISPARO AUTOMÁTICO MUY RÁPIDO
     const autoFire = setInterval(() => {
       bullets.current.push({
         x: player.current.x + 18,
         y: canvas.height - 130
       })
-    }, 300)
+    }, 140) // MÁS RÁPIDO
 
     function handleTouch(e) {
       e.preventDefault()
@@ -151,16 +151,16 @@ export default function Game() {
   }, [mounted, level, gameOver])
 
   useEffect(() => {
-    if (score >= level * 150) setLevel(v => v + 1)
+    if (score >= level * 180) setLevel(v => v + 1)
     if (lives <= 0) setGameOver(true)
   }, [score, lives])
 
-  // ✅ DISPARO PESADO CON BOTÓN
+  // ✅ 💥 BOTÓN DE FUEGO PESADO
   function heavyShoot() {
     if (!canvasRef.current) return
     heavyBullets.current.push({
-      x: player.current.x + 14,
-      y: canvasRef.current.height - 140
+      x: player.current.x + 12,
+      y: canvasRef.current.height - 150
     })
   }
 
@@ -193,7 +193,7 @@ export default function Game() {
 
       <canvas ref={canvasRef} />
 
-      {/* ✅ BOTÓN DISPARO PESADO */}
+      {/* ✅ BOTÓN GRANDE DE DISPARO PESADO */}
       <button onTouchStart={heavyShoot} style={styles.heavyBtn}>
         💥
       </button>
@@ -215,20 +215,21 @@ const styles = {
     left: 12,
     color: '#fff',
     zIndex: 20,
-    fontSize: 14
+    fontSize: 16
   },
   heavyBtn: {
     position: 'absolute',
-    bottom: 30,
-    right: 30,
-    width: 80,
-    height: 80,
+    bottom: 25,
+    right: 25,
+    width: 95,
+    height: 95,
     borderRadius: '50%',
     border: 'none',
-    background: 'linear-gradient(145deg,#f97316,#7c2d12)',
+    background: 'radial-gradient(circle,#f97316,#7c2d12)',
     color: '#fff',
-    fontSize: 30,
-    zIndex: 20
+    fontSize: 36,
+    fontWeight: 'bold',
+    zIndex: 50
   },
   fullBtn: {
     position: 'absolute',
