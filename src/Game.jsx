@@ -10,6 +10,7 @@ export default function Game() {
   const [discount, setDiscount] = useState(null)
 
   const player = useRef({ x: 160 })
+  const targetX = useRef(160)
   const bullets = useRef([])
   const zombies = useRef([])
   const speed = useRef(1)
@@ -37,13 +38,16 @@ export default function Game() {
 
     function movePlayer(e) {
       const touchX = e.touches[0].clientX
-      player.current.x = Math.max(0, Math.min(320, touchX - 20))
+      targetX.current = Math.max(0, Math.min(320, touchX - 20))
     }
 
     function update() {
       if (gameOver) return
 
       ctx.clearRect(0, 0, 360, 500)
+
+      // 🎯 Movimiento suave hacia el objetivo
+      player.current.x += (targetX.current - player.current.x) * 0.15
 
       // Player
       ctx.fillStyle = 'cyan'
@@ -69,7 +73,7 @@ export default function Game() {
         }
       })
 
-      // Collisions
+      // Colisiones
       zombies.current.forEach((z, zi) => {
         bullets.current.forEach((b, bi) => {
           if (
@@ -149,7 +153,7 @@ export default function Game() {
       <canvas ref={canvasRef} style={{ background: '#111', borderRadius: 8 }} />
       <p>
         👉 Tocá para disparar<br />
-        👉 Arrastrá el dedo para moverte
+        👉 Deslizá el dedo para moverte suave
       </p>
     </div>
   )
