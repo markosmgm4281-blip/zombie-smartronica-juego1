@@ -1,10 +1,11 @@
 {
-  "name": "Smartronica M&M Zombie Game",
-  "short_name": "Zombie M&M",
+  "name": "Smartronica M&M - Juego Zombie",
+  "short_name": "Smartronica",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000814",
-  "theme_color": "#000814",
+  "background_color": "#000000",
+  "theme_color": "#0a0a23",
+  "orientation": "landscape",
   "icons": [
     {
       "src": "/Icon-192.png",
