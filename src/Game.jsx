@@ -3,11 +3,11 @@ import { useRef, useEffect, useState } from 'react'
 
 export default function Game() {
   const canvasRef = useRef(null)
+
   const [mounted, setMounted] = useState(false)
   const [score, setScore] = useState(0)
-  const [lives, setLives] = useState(3)
   const [level, setLevel] = useState(1)
-  const [gameOver, setGameOver] = useState(false)
+  const [lives, setLives] = useState(3)
   const [win, setWin] = useState(false)
 
   const player = useRef({ x: 180, y: 500 })
@@ -25,7 +25,11 @@ export default function Game() {
     canvas.height = window.innerHeight
 
     document.body.style.overflow = 'hidden'
-    document.addEventListener('touchmove', e => e.preventDefault(), { passive: false })
+    document.addEventListener(
+      'touchmove',
+      e => e.preventDefault(),
+      { passive: false }
+    )
 
     let lastShot = 0
 
@@ -40,15 +44,18 @@ export default function Game() {
     function spawnBoss() {
       boss.current = {
         x: canvas.width / 2 - 50,
-        y: 50,
-        life: 60 + level * 20
+        y: 60,
+        life: 80 + level * 30
       }
     }
 
     function autoShoot() {
       const now = Date.now()
-      if (now - lastShot > 180) {
-        bullets.current.push({ x: player.current.x, y: player.current.y })
+      if (now - lastShot > 120) {
+        bullets.current.push({
+          x: player.current.x + 8,
+          y: player.current.y
+        })
         lastShot = now
       }
     }
@@ -58,17 +65,25 @@ export default function Game() {
 
       autoShoot()
 
+      // Enemigos
       enemies.current.forEach(e => {
         e.y += 2 + level
         ctx.fillStyle = 'red'
         ctx.fillRect(e.x, e.y, 20, 20)
+
+        if (e.y > canvas.height) {
+          enemies.current = enemies.current.filter(en => en !== e)
+          setLives(v => v - 1)
+        }
       })
 
+      // Boss
       if (boss.current) {
         ctx.fillStyle = 'purple'
-        ctx.fillRect(boss.current.x, boss.current.y, 100, 80)
+        ctx.fillRect(boss.current.x, boss.current.y, 120, 80)
       }
 
+      // Balas
       bullets.current.forEach((b, i) => {
         b.y -= 12
         ctx.fillStyle = 'yellow'
@@ -78,6 +93,7 @@ export default function Game() {
           if (b.x < e.x + 20 && b.x > e.x && b.y < e.y + 20) {
             e.life--
             bullets.current.splice(i, 1)
+
             if (e.life <= 0) {
               enemies.current.splice(j, 1)
               setScore(s => s + 10)
@@ -88,7 +104,7 @@ export default function Game() {
         if (boss.current) {
           if (
             b.x > boss.current.x &&
-            b.x < boss.current.x + 100 &&
+            b.x < boss.current.x + 120 &&
             b.y > boss.current.y &&
             b.y < boss.current.y + 80
           ) {
@@ -103,6 +119,7 @@ export default function Game() {
         }
       })
 
+      // Jugador
       ctx.fillStyle = 'cyan'
       ctx.fillRect(player.current.x, player.current.y, 20, 20)
 
@@ -110,8 +127,9 @@ export default function Game() {
     }
 
     loop()
-    spawnInterval = setInterval(spawnEnemy, 1200)
-    bossTimeout = setTimeout(spawnBoss, 25000)
+
+    let spawnInterval = setInterval(spawnEnemy, 1000)
+    let bossTimeout = setTimeout(spawnBoss, 20000)
 
     return () => {
       clearInterval(spawnInterval)
@@ -126,9 +144,9 @@ export default function Game() {
   }
 
   const heavyShoot = () => {
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 10; i++) {
       bullets.current.push({
-        x: player.current.x + Math.random() * 30 - 15,
+        x: player.current.x + Math.random() * 40 - 20,
         y: player.current.y
       })
     }
