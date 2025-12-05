@@ -1,199 +1,171 @@
-import { useEffect, useRef, useState } from 'react'
+'use client'
+import { useRef, useEffect, useState } from 'react'
 
 export default function Game() {
   const canvasRef = useRef(null)
-  const bullets = useRef([])
-  const heavyBullets = useRef([])
-  const zombies = useRef([])
-  const player = useRef({ x: 150 })
-  const targetX = useRef(150)
-
   const [mounted, setMounted] = useState(false)
   const [score, setScore] = useState(0)
   const [lives, setLives] = useState(3)
   const [level, setLevel] = useState(1)
   const [gameOver, setGameOver] = useState(false)
+  const [win, setWin] = useState(false)
+
+  const player = useRef({ x: 180, y: 500 })
+  const bullets = useRef([])
+  const enemies = useRef([])
+  const boss = useRef(null)
 
   useEffect(() => {
     setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (!mounted || !canvasRef.current) return
 
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
 
-    function resize() {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-      player.current.x = canvas.width / 2 - 20
-      targetX.current = player.current.x
-    }
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
 
-    resize()
-    window.addEventListener('resize', resize)
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('touchmove', e => e.preventDefault(), { passive: false })
 
-    function spawnZombie() {
-      zombies.current.push({
-        x: Math.random() * (canvas.width - 50),
-        y: -60,
-        size: 50,
-        life: level >= 3 ? 2 : 1
+    let lastShot = 0
+
+    function spawnEnemy() {
+      enemies.current.push({
+        x: Math.random() * canvas.width,
+        y: -20,
+        life: 2 + level
       })
     }
 
-    function draw() {
-      if (gameOver) return
+    function spawnBoss() {
+      boss.current = {
+        x: canvas.width / 2 - 50,
+        y: 50,
+        life: 60 + level * 20
+      }
+    }
 
-      ctx.fillStyle = '#020617'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+    function autoShoot() {
+      const now = Date.now()
+      if (now - lastShot > 180) {
+        bullets.current.push({ x: player.current.x, y: player.current.y })
+        lastShot = now
+      }
+    }
 
-      // jugador
-      player.current.x += (targetX.current - player.current.x) * 0.25
-      ctx.fillStyle = '#38bdf8'
-      ctx.fillRect(player.current.x, canvas.height - 110, 40, 40)
+    function loop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      // 🔫 BALAS AUTOMÁTICAS (RÁPIDAS)
-      ctx.fillStyle = '#fde047'
+      autoShoot()
+
+      enemies.current.forEach(e => {
+        e.y += 2 + level
+        ctx.fillStyle = 'red'
+        ctx.fillRect(e.x, e.y, 20, 20)
+      })
+
+      if (boss.current) {
+        ctx.fillStyle = 'purple'
+        ctx.fillRect(boss.current.x, boss.current.y, 100, 80)
+      }
+
       bullets.current.forEach((b, i) => {
-        b.y -= 18 // MÁS RÁPIDO
-        ctx.fillRect(b.x, b.y, 6, 16)
-        if (b.y < 0) bullets.current.splice(i, 1)
-      })
-
-      // 💥 BALAS PESADAS
-      ctx.fillStyle = '#f97316'
-      heavyBullets.current.forEach((b, i) => {
         b.y -= 12
-        ctx.fillRect(b.x, b.y, 14, 30)
-        if (b.y < 0) heavyBullets.current.splice(i, 1)
-      })
+        ctx.fillStyle = 'yellow'
+        ctx.fillRect(b.x, b.y, 4, 12)
 
-      // 🧟 ZOMBIES
-      ctx.fillStyle = '#22c55e'
-      zombies.current.forEach((z, zi) => {
-        z.y += 1.4 + level * 0.5
-        ctx.fillRect(z.x, z.y, z.size, z.size)
-
-        if (z.y > canvas.height) {
-          zombies.current.splice(zi, 1)
-          setLives(v => v - 1)
-        }
-      })
-
-      // colisión bala normal
-      zombies.current.forEach((z, zi) => {
-        bullets.current.forEach((b, bi) => {
-          if (
-            b.x < z.x + z.size &&
-            b.x + 6 > z.x &&
-            b.y < z.y + z.size &&
-            b.y + 16 > z.y
-          ) {
-            z.life -= 1
-            bullets.current.splice(bi, 1)
-            if (z.life <= 0) {
-              zombies.current.splice(zi, 1)
-              setScore(v => v + 10)
+        enemies.current.forEach((e, j) => {
+          if (b.x < e.x + 20 && b.x > e.x && b.y < e.y + 20) {
+            e.life--
+            bullets.current.splice(i, 1)
+            if (e.life <= 0) {
+              enemies.current.splice(j, 1)
+              setScore(s => s + 10)
             }
           }
         })
-      })
 
-      // colisión bala pesada (mata de 1)
-      zombies.current.forEach((z, zi) => {
-        heavyBullets.current.forEach((b, bi) => {
+        if (boss.current) {
           if (
-            b.x < z.x + z.size &&
-            b.x + 14 > z.x &&
-            b.y < z.y + z.size &&
-            b.y + 30 > z.y
+            b.x > boss.current.x &&
+            b.x < boss.current.x + 100 &&
+            b.y > boss.current.y &&
+            b.y < boss.current.y + 80
           ) {
-            zombies.current.splice(zi, 1)
-            heavyBullets.current.splice(bi, 1)
-            setScore(v => v + 30)
+            boss.current.life--
+            bullets.current.splice(i, 1)
+
+            if (boss.current.life <= 0) {
+              boss.current = null
+              setWin(true)
+            }
           }
-        })
+        }
       })
 
-      requestAnimationFrame(draw)
+      ctx.fillStyle = 'cyan'
+      ctx.fillRect(player.current.x, player.current.y, 20, 20)
+
+      requestAnimationFrame(loop)
     }
 
-    const spawner = setInterval(spawnZombie, 850)
-
-    // ✅ 🔥 DISPARO AUTOMÁTICO MUY RÁPIDO
-    const autoFire = setInterval(() => {
-      bullets.current.push({
-        x: player.current.x + 18,
-        y: canvas.height - 130
-      })
-    }, 140) // MÁS RÁPIDO
-
-    function handleTouch(e) {
-      e.preventDefault()
-      if (!e.touches || !e.touches[0]) return
-      targetX.current = e.touches[0].clientX - 20
-    }
-
-    window.addEventListener('touchstart', handleTouch, { passive: false })
-    window.addEventListener('touchmove', handleTouch, { passive: false })
-
-    draw()
+    loop()
+    spawnInterval = setInterval(spawnEnemy, 1200)
+    bossTimeout = setTimeout(spawnBoss, 25000)
 
     return () => {
-      clearInterval(spawner)
-      clearInterval(autoFire)
-      window.removeEventListener('touchstart', handleTouch)
-      window.removeEventListener('touchmove', handleTouch)
-      window.removeEventListener('resize', resize)
+      clearInterval(spawnInterval)
+      clearTimeout(bossTimeout)
     }
-  }, [mounted, level, gameOver])
+  }, [level])
 
-  useEffect(() => {
-    if (score >= level * 180) setLevel(v => v + 1)
-    if (lives <= 0) setGameOver(true)
-  }, [score, lives])
-
-  // ✅ 💥 BOTÓN DE FUEGO PESADO
-  function heavyShoot() {
-    if (!canvasRef.current) return
-    heavyBullets.current.push({
-      x: player.current.x + 12,
-      y: canvasRef.current.height - 150
-    })
+  const movePlayer = e => {
+    const touch = e.touches[0]
+    player.current.x = touch.clientX
+    player.current.y = touch.clientY
   }
 
-  function goFullscreen() {
-    const el = document.documentElement
-    if (el.requestFullscreen) el.requestFullscreen()
+  const heavyShoot = () => {
+    for (let i = 0; i < 12; i++) {
+      bullets.current.push({
+        x: player.current.x + Math.random() * 30 - 15,
+        y: player.current.y
+      })
+    }
+  }
+
+  const goFullscreen = () => {
+    document.documentElement.requestFullscreen?.()
   }
 
   if (!mounted) return null
 
-  if (gameOver) {
+  if (win) {
     return (
       <div style={styles.center}>
-        <h2>💀 GAME OVER</h2>
-        <p>Puntaje: {score}</p>
+        <h2>🏆 ¡GANASTE EL JUEGO!</h2>
+        <p>Tenés un DESCUENTO EXCLUSIVO</p>
         <a href="https://wa.me/541137659959" style={styles.whatsapp}>
-          Smartronica M&M
+          Reclamar en Smartronica M&M
         </a>
       </div>
     )
   }
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} onTouchMove={movePlayer}>
       <button onClick={goFullscreen} style={styles.fullBtn}>⛶</button>
 
       <div style={styles.hud}>
         Nivel: {level} | Puntos: {score} | Vidas: {lives}
       </div>
 
+      <div style={styles.publicidad}>
+        Publicidad — Smartronica M&M 📱 1137659959
+      </div>
+
       <canvas ref={canvasRef} />
 
-      {/* ✅ BOTÓN GRANDE DE DISPARO PESADO */}
       <button onTouchStart={heavyShoot} style={styles.heavyBtn}>
         💥
       </button>
@@ -216,6 +188,14 @@ const styles = {
     color: '#fff',
     zIndex: 20,
     fontSize: 16
+  },
+  publicidad: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    color: '#22c55e',
+    fontSize: 14,
+    zIndex: 30
   },
   heavyBtn: {
     position: 'absolute',
@@ -255,6 +235,7 @@ const styles = {
   center: {
     textAlign: 'center',
     marginTop: 120,
-    color: 'white'
+    color: 'white',
+    padding: 20
   }
 }
