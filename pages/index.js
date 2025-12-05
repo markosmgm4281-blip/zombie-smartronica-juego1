@@ -1,126 +1,129 @@
-import { useEffect, useRef, useState } from "react";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Zombie Smartronica M&M</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body { margin:0; background:#000; color:white; font-family:Arial; text-align:center; }
+    canvas { background:#111; display:block; margin:auto; border:2px solid red; }
+    #ui { position:fixed; top:10px; left:10px; }
+    #whatsapp { position:fixed; bottom:10px; left:10px; background:green; padding:10px; border-radius:10px; color:white; text-decoration:none; }
+    #heavyBtn { position:fixed; bottom:20px; right:20px; background:red; padding:15px; border-radius:50%; font-weight:bold; }
+  </style>
+</head>
+<body>
 
-export default function Home() {
-  const canvasRef = useRef(null);
-  const [started, setStarted] = useState(false);
-  const [message, setMessage] = useState("Tocá para iniciar");
+<h2>🧟 ZOMBIE - Smartronica M&M</h2>
+<canvas id="game" width="360" height="640"></canvas>
 
-  useEffect(() => {
-    if (!started) return;
+<div id="ui">
+  <p>Nivel: <span id="nivel">1</span></p>
+  <p>Vida: <span id="vida">100</span></p>
+</div>
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+<a id="whatsapp" href="https://wa.me/541137659959" target="_blank">
+📲 Smartronica M&M
+</a>
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+<div id="heavyBtn">🔥</div>
 
-    let player = { x: canvas.width / 2, y: canvas.height - 120 };
-    let bullets = [];
-    let enemies = [];
-    let frame = 0;
-    let running = true;
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-    function shoot() {
-      bullets.push({ x: player.x, y: player.y });
-    }
+let nivel = 1;
+let vida = 100;
+let zombies = [];
+let jefe = null;
+let heavyReady = true;
 
-    function spawnEnemy() {
-      enemies.push({
-        x: Math.random() * canvas.width,
-        y: -40,
-        life: 3,
-      });
-    }
+const player = { x:180, y:550, size:20 };
 
-    function update() {
-      if (!running) return;
-
-      frame++;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (frame % 10 === 0) shoot(); // disparo automático
-      if (frame % 50 === 0) spawnEnemy();
-
-      bullets.forEach((b) => (b.y -= 10));
-      enemies.forEach((e) => (e.y += 3));
-
-      bullets.forEach((b, bi) => {
-        enemies.forEach((e, ei) => {
-          if (
-            b.x > e.x - 20 &&
-            b.x < e.x + 20 &&
-            b.y > e.y - 20 &&
-            b.y < e.y + 20
-          ) {
-            e.life--;
-            bullets.splice(bi, 1);
-            if (e.life <= 0) enemies.splice(ei, 1);
-          }
-        });
-      });
-
-      ctx.fillStyle = "white";
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 20, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = "red";
-      enemies.forEach((e) => {
-        ctx.fillRect(e.x - 20, e.y - 20, 40, 40);
-      });
-
-      ctx.fillStyle = "yellow";
-      bullets.forEach((b) => {
-        ctx.fillRect(b.x - 3, b.y - 10, 6, 10);
-      });
-
-      requestAnimationFrame(update);
-    }
-
-    canvas.addEventListener("touchmove", (e) => {
-      player.x = e.touches[0].clientX;
-      player.y = e.touches[0].clientY;
-    });
-
-    update();
-
-    return () => (running = false);
-  }, [started]);
-
-  return (
-    <div
-      style={{
-        background: "#000",
-        color: "white",
-        width: "100vw",
-        height: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexDirection: "column",
-      }}
-    >
-      {!started ? (
-        <>
-          <h1>Smartronica M&M</h1>
-          <button
-            onClick={() => {
-              setStarted(true);
-              setMessage("Juego iniciado");
-            }}
-            style={{
-              padding: 20,
-              fontSize: 20,
-              marginTop: 20,
-            }}
-          >
-            Iniciar juego
-          </button>
-          <p>{message}</p>
-        </>
-      ) : (
-        <canvas ref={canvasRef} />
-      )}
-    </div>
-  );
+function crearZombie() {
+  zombies.push({
+    x: Math.random()*340,
+    y: -20,
+    speed: 1 + nivel * 0.2,
+    life: 10 + nivel * 2
+  });
 }
+
+function crearJefe() {
+  jefe = {
+    x: 80,
+    y: 50,
+    life: 500 + nivel * 50,
+    speed: 1
+  };
+}
+
+function dispararPesada() {
+  if(!heavyReady) return;
+  heavyReady = false;
+  zombies = [];
+  if(jefe) jefe.life -= 300;
+  setTimeout(()=>heavyReady=true, 7000);
+}
+
+document.getElementById("heavyBtn").onclick = dispararPesada;
+
+canvas.addEventListener("touchmove", e=>{
+  player.x = e.touches[0].clientX - 20;
+});
+
+function actualizar() {
+  ctx.clearRect(0,0,360,640);
+
+  // Player
+  ctx.fillStyle="cyan";
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+
+  // Zombies
+  ctx.fillStyle="lime";
+  zombies.forEach(z=>{
+    z.y += z.speed;
+    ctx.fillRect(z.x, z.y, 15, 15);
+    if(z.y > 600){
+      vida -= 5;
+    }
+  });
+
+  // Jefe
+  if(jefe){
+    ctx.fillStyle="purple";
+    ctx.fillRect(jefe.x, jefe.y, 200, 40);
+  }
+
+  if(vida <= 0){
+    alert("GAME OVER - Smartronica M&M");
+    mostrarPublicidad();
+    location.reload();
+  }
+
+  document.getElementById("nivel").textContent = nivel;
+  document.getElementById("vida").textContent = vida;
+}
+
+function mostrarPublicidad(){
+  alert("Publicidad mostrada - Ganaste dinero 💰");
+}
+
+setInterval(()=>{
+  actualizar();
+  if(zombies.length < 5 + nivel) crearZombie();
+  if(nivel % 5 === 0 && !jefe) crearJefe();
+}, 30);
+
+setInterval(()=>{
+  nivel++;
+  if(nivel % 5 === 0){
+    alert("⚠️ JEFE FINAL ⚠️");
+    crearJefe();
+  }
+}, 15000);
+</script>
+
+</body>
+</html>
