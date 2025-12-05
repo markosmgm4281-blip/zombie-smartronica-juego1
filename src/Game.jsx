@@ -177,7 +177,7 @@ export default function Game() {
         <h2>💀 GAME OVER</h2>
         <p>Puntaje: {score}</p>
         <a href="https://wa.me/541137659959" style={styles.whatsapp}>
-          SmARTRonica M&M
+          Smartronica M&M
         </a>
       </div>
     )
