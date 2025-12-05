@@ -1,4 +1,3 @@
-'use client'
 import { useRef, useEffect, useState } from 'react'
 
 export default function Game() {
@@ -17,6 +16,7 @@ export default function Game() {
   const boss = useRef(null)
 
   useEffect(() => {
+    if (!canvasRef.current) return
     setMounted(true)
 
     const canvas = canvasRef.current
@@ -26,33 +26,36 @@ export default function Game() {
     canvas.height = window.innerHeight
 
     document.body.style.overflow = 'hidden'
-    document.addEventListener('touchmove', e => e.preventDefault(), { passive: false })
+
+    function preventZoom(e) {
+      e.preventDefault()
+    }
+
+    document.addEventListener('touchmove', preventZoom, { passive: false })
 
     let lastShot = 0
-    let spawnInterval
-    let bossInterval
 
     function spawnEnemy() {
       enemies.current.push({
         x: Math.random() * canvas.width,
         y: -20,
-        life: 2 + level,
-        speed: 1 + level * 0.3
+        life: 3 + level,
+        speed: 1 + level * 0.5
       })
     }
 
     function spawnBoss() {
       boss.current = {
         x: canvas.width / 2 - 60,
-        y: 40,
-        life: 80 + level * 25,
+        y: 50,
+        life: 100 + level * 30,
         dir: 1
       }
     }
 
     function autoShoot() {
       const now = Date.now()
-      if (now - lastShot > 180) {
+      if (now - lastShot > 130) {
         bullets.current.push({
           x: player.current.x + 10,
           y: player.current.y
@@ -66,7 +69,6 @@ export default function Game() {
 
       autoShoot()
 
-      // Enemigos
       enemies.current.forEach((e, i) => {
         e.y += e.speed
         ctx.fillStyle = 'red'
@@ -78,9 +80,8 @@ export default function Game() {
         }
       })
 
-      // Jefe
       if (boss.current) {
-        boss.current.x += boss.current.dir * 3
+        boss.current.x += boss.current.dir * 4
 
         if (boss.current.x < 0 || boss.current.x > canvas.width - 120) {
           boss.current.dir *= -1
@@ -89,8 +90,7 @@ export default function Game() {
         ctx.fillStyle = 'purple'
         ctx.fillRect(boss.current.x, boss.current.y, 120, 80)
 
-        // Disparo del jefe
-        if (Math.random() < 0.03) {
+        if (Math.random() < 0.04) {
           enemyBullets.current.push({
             x: boss.current.x + 60,
             y: boss.current.y + 80
@@ -98,16 +98,16 @@ export default function Game() {
         }
       }
 
-      // Balas del jugador
       bullets.current.forEach((b, i) => {
         b.y -= 12
         ctx.fillStyle = 'yellow'
         ctx.fillRect(b.x, b.y, 5, 15)
 
         enemies.current.forEach((e, j) => {
-          if (b.x < e.x + 24 && b.x > e.x && b.y < e.y + 24 && b.y > e.y) {
+          if (b.x > e.x && b.x < e.x + 24 && b.y > e.y && b.y < e.y + 24) {
             e.life--
             bullets.current.splice(i, 1)
+
             if (e.life <= 0) {
               enemies.current.splice(j, 1)
               setScore(s => s + 10)
@@ -135,7 +135,6 @@ export default function Game() {
         }
       })
 
-      // Balas enemigas
       enemyBullets.current.forEach((b, i) => {
         b.y += 7
         ctx.fillStyle = 'white'
@@ -143,16 +142,15 @@ export default function Game() {
 
         if (
           b.x > player.current.x &&
-          b.x < player.current.x + 20 &&
+          b.x < player.current.x + 22 &&
           b.y > player.current.y &&
-          b.y < player.current.y + 20
+          b.y < player.current.y + 22
         ) {
           enemyBullets.current.splice(i, 1)
           setLives(l => l - 1)
         }
       })
 
-      // Jugador
       ctx.fillStyle = 'cyan'
       ctx.fillRect(player.current.x, player.current.y, 22, 22)
 
@@ -161,17 +159,15 @@ export default function Game() {
       requestAnimationFrame(loop)
     }
 
-    spawnInterval = setInterval(spawnEnemy, Math.max(800 - level * 60, 250))
+    const enemyTimer = setInterval(spawnEnemy, Math.max(900 - level * 80, 250))
 
-    if (level % 5 === 0) {
-      bossInterval = setTimeout(spawnBoss, 3000)
-    }
+    if (level % 5 === 0) setTimeout(spawnBoss, 3000)
 
     loop()
 
     return () => {
-      clearInterval(spawnInterval)
-      clearTimeout(bossInterval)
+      clearInterval(enemyTimer)
+      document.removeEventListener('touchmove', preventZoom)
     }
   }, [level])
 
@@ -182,7 +178,7 @@ export default function Game() {
   }
 
   const heavyShoot = () => {
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 20; i++) {
       bullets.current.push({
         x: player.current.x + Math.random() * 40 - 20,
         y: player.current.y
@@ -191,7 +187,8 @@ export default function Game() {
   }
 
   const goFullscreen = () => {
-    document.documentElement.requestFullscreen?.()
+    if (document.documentElement.requestFullscreen)
+      document.documentElement.requestFullscreen()
   }
 
   if (!mounted) return null
@@ -200,7 +197,7 @@ export default function Game() {
     return (
       <div style={styles.center}>
         <h2>💀 GAME OVER</h2>
-        <p>Nivel alcanzado: {level}</p>
+        <p>Nivel: {level}</p>
         <p>Puntaje: {score}</p>
         <a href="https://wa.me/541137659959" style={styles.whatsapp}>
           Smartronica M&M
