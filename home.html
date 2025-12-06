@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Zombie - Smartronica M&M</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      background: #0b0f13;
+      color: white;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    #ui {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+    }
+
+    button {
+      background: red;
+      color: white;
+      border: none;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+
+    #whatsapp {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: #25D366;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: bold;
+      color: black;
+      text-decoration: none;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="ui">
+    Nivel: <span id="nivel">1</span><br>
+    <button onclick="armaPesada()">ARMA PESADA</button>
+  </div>
+
+  <a id="whatsapp" href="https://wa.me/5491137659959" target="_blank">
+    WhatsApp Smartronica M&M
+  </a>
+
+  <canvas id="juego"></canvas>
+
+  <script>
+    const canvas = document.getElementById("juego");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let jugador = { x: 200, y: 300 };
+    let balas = [];
+    let zombis = [];
+    let nivel = 1;
+    let armaPower = false;
+
+    function crearZombi() {
+      zombis.push({
+        x: Math.random() * canvas.width,
+        y: 0,
+        vida: 30 + nivel * 10
+      });
+    }
+
+    function armaPesada() {
+      armaPower = true;
+      setTimeout(() => armaPower = false, 3000);
+    }
+
+    canvas.addEventListener("click", e => {
+      balas.push({
+        x: jugador.x,
+        y: jugador.y,
+        dx: (e.clientX - jugador.x) / 10,
+        dy: (e.clientY - jugador.y) / 10,
+        fuerza: armaPower ? 50 : 20
+      });
+    });
+
+    function actualizar() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Jugador
+      ctx.fillStyle = "cyan";
+      ctx.fillRect(jugador.x, jugador.y, 20, 20);
+
+      // Balas
+      balas.forEach(b => {
+        b.x += b.dx;
+        b.y += b.dy;
+        ctx.fillStyle = b.fuerza == 50 ? "orange" : "yellow";
+        ctx.fillRect(b.x, b.y, 5, 5);
+      });
+
+      // Zombis
+      zombis.forEach(z => {
+        z.y += 0.5 * nivel;
+        ctx.fillStyle = "green";
+        ctx.fillRect(z.x, z.y, 20, 20);
+      });
+
+      // Colisiones
+      balas.forEach((b, bi) => {
+        zombis.forEach((z, zi) => {
+          if (
+            b.x < z.x + 20 &&
+            b.x + 5 > z.x &&
+            b.y < z.y + 20 &&
+            b.y + 5 > z.y
+          ) {
+            z.vida -= b.fuerza;
+            balas.splice(bi, 1);
+            if (z.vida <= 0) zombis.splice(zi, 1);
+          }
+        });
+      });
+
+      // Subir nivel
+      if (zombis.length === 0) {
+        nivel++;
+        document.getElementById("nivel").textContent = nivel;
+        for (let i = 0; i < nivel; i++) crearZombi();
+      }
+
+      requestAnimationFrame(actualizar);
+    }
+
+    for (let i = 0; i < 5; i++) crearZombi();
+    actualizar();
+  </script>
+
+</body>
+</html>
