@@ -2,13 +2,38 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Zombie Smartrónica</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zombie Smartronica</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <style>
+    *{margin:0;padding:0}
+    html,body{
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background:#000;
+      touch-action:none;
+    }
+    canvas{display:block}
+    #heavyBtn{
+      position:fixed;
+      right:20px;
+      bottom:20px;
+      width:70px;
+      height:70px;
+      border-radius:50%;
+      background:#c33;
+      color:#fff;
+      font-weight:bold;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+    }
+  </style>
 </head>
-<body style="background:#000; color:#0f0; text-align:center; font-family:Arial">
-
-  <h1>🧟 Zombie Smartrónica</h1>
-  <p>Base del juego creada correctamente ✅</p>
-
+<body>
+  <canvas id="game"></canvas>
+  <div id="heavyBtn">HEAVY</div>
+  <script src="game.js"></script>
 </body>
 </html>
